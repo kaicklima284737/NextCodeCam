@@ -1,9 +1,13 @@
 {
   "rules": {
-    "users": { "$uid": { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid" } },
+    "users": { "$uid": { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid",
+      "items": { "$id": { ".validate": "!newData.exists() || (newData.child('img').isString() && newData.child('img').val().length < 900000)" } } } },
     "groups": { "$code": {
       ".read": "auth != null",
-      "$item": { ".write": "auth != null", ".validate": "newData.hasChildren(['title','folder','thumb','by','ts']) && newData.child('thumb').val().length < 400000" }
+      "$item": {
+        ".write": "auth != null && (!data.exists() || data.child('uid').val() === auth.uid)",
+        ".validate": "newData.hasChildren(['title','folder','thumb','by','uid','ts']) && newData.child('uid').val() === auth.uid && newData.child('thumb').val().length < 400000"
+      }
     } }
   }
 }

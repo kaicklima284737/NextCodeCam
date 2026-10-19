@@ -1,61 +1,59 @@
-# Câmera Acadêmica · NextCode (FIAP · Sprint 2)
+# Câmera Acadêmica · NextCode (FIAP)
 
-PWA sem build (HTML + JS puro): câmera nativa, correção de perspectiva, OCR, resumo, quiz, flashcards,
-pastas automáticas por IA, QR seguro, login real, backup na nuvem e grupo de estudo.
+PWA sem build: câmera, fila de revisão, OCR/IA, pastas automáticas, estudo (resumo, quiz, flashcards), QR seguro, nuvem e grupo.
 
 ## Arquivos
-| Arquivo | Função |
-|---|---|
-| `index.html` | App completo |
-| `config.js` | **Você preenche:** chave Firebase, URL do banco, Client ID Google |
-| `netlify/functions/ai.js` | Proxy da IA (a chave Gemini fica só no servidor) |
-| `netlify.toml`, `_headers` | Configuração de hospedagem |
-| `firebase.rules.json` | Regras do banco (dados por usuário + grupos) |
-| `manifest.webmanifest`, `icons/`, `sw.js` | Instalação e uso offline |
+`index.html` app · `config.js` suas chaves públicas · `netlify/functions/ai.js` proxy da IA · `_headers` segurança (CSP) · `firebase.rules.json` regras · `sw.js`, `manifest.webmanifest`, `icons/` instalação · `tests/` testes.
 
-## Passo 1 · Firebase (login + nuvem + grupo), plano gratuito
-1. console.firebase.google.com › Criar projeto.
-2. **Authentication** › Método de login › ative **E-mail/senha** (e **Google**, se quiser).
-3. **Realtime Database** › Criar banco › aba Regras › cole `firebase.rules.json` › Publicar.
-4. **Configurações do projeto** › copie a *Chave de API da Web*.
-5. Abra `config.js` e preencha `ak` (chave) e `fb` (URL do banco).
-6. Google (opcional): Google Cloud Console › APIs e serviços › Credenciais › ID do cliente OAuth (Web); em "Origens JavaScript autorizadas" coloque o endereço do seu site. Cole o ID em `gc`. No Firebase, em Authentication › Google, informe o mesmo Client ID.
-7. Authentication › Configurações › Domínios autorizados: adicione o domínio do seu site.
+## 1. Firebase (gratuito)
+1. console.firebase.google.com › criar projeto.
+2. Authentication › ative **E-mail/senha** (e Google, se quiser). Em Domínios autorizados, adicione `seu-site.netlify.app`.
+3. Realtime Database › criar › aba Regras › cole `firebase.rules.json` › Publicar.
+4. Configurações do projeto › copie a **Chave de API da Web** (começa com `AIza`).
+5. Preencha `config.js`: `ak` (chave) e `fb` (URL do banco, `https://…firebaseio.com`).
+O e-mail precisa ser de um domínio da lista em Mais › QR Code seguro. Inclua o da sua faculdade.
 
-O cadastro por e-mail só aceita domínios da lista de "Domínios permitidos" (Mais › QR Code seguro); inclua o da sua instituição.
+## 2. IA gratuita (Gemini)
+- Netlify › Environment variables: `GEMINI_API_KEY` (marque secret, escopo Functions), `FIREBASE_API_KEY` e `ALLOWED_EMAIL_DOMAINS` (ex.: `fiap.com.br`).
+- No app: Mais › IA › ligue **IA pelo servidor**.
+- Alternativa de teste: cole sua chave em Mais › IA (fica no aparelho).
+- Modelo: `gemini-2.5-flash`, com reserva automática `gemini-flash-latest`.
 
-## Passo 2 · IA gratuita (Gemini), duas formas
-- **Rápida (protótipo):** chave de aistudio.google.com/apikey colada em Mais › IA. Fica no aparelho.
-- **Segura (recomendada):** no Netlify, Site settings › Environment variables: `GEMINI_API_KEY` e `FIREBASE_API_KEY`. Depois ligue **IA pelo servidor** em Mais › IA. Só usuários logados chamam a função.
-Sem IA, o app faz OCR local (Tesseract.js), sem resumo, quiz nem classificação.
-
-## Passo 3 · Publicar (HTTPS é obrigatório para a câmera)
-- **Só o app (sem IA pelo servidor):** arraste a pasta em app.netlify.com/drop.
-- **App + função de IA:** use Git ou a CLI:
-  ```
-  npm i -g netlify-cli && netlify login && netlify deploy --prod
-  ```
-- Local: `python3 -m http.server 8080` e abra `http://localhost:8080`.
-Android: menu › Instalar app. iPhone: Compartilhar › Adicionar à Tela de Início.
-
-## Como funciona
-Captura › **área temporária de revisão** › IA analisa › você decide › salva na pasta › sincroniza.
-- **Lousa/Documento:** detecta o quadrilátero, corrige a perspectiva (homografia), normaliza luz e sombra (reduz reflexo difuso) e ajusta contraste. No modo Documento, o OCR só roda se as bordas retangulares forem detectadas (RN04); "Reanalisar" força.
-- **Nuvem (HU9):** cada item é salvo em `users/<uid>/items`. Envio automático, em segundo plano, a cada edição, ao voltar a conexão e a cada 30 s. Opção "só no Wi-Fi" (depende de o navegador informar o tipo de rede; no iPhone sempre sincroniza). Entrar em outro aparelho recupera tudo.
-- **Grupo:** código compartilhado; exige login.
-
-## Limites conhecidos
-- Reflexo forte que apaga o texto não é recuperável: o app avisa só pela nitidez; recapture.
-- Detecção de bordas é por contraste: funciona melhor com fundo diferente da folha/lousa.
-- Imagens são guardadas no Realtime Database (ok para protótipo). Em escala, use Cloud Storage.
-- O token de sessão fica no `localStorage`. Em app nativo, use armazenamento seguro (Capacitor).
-- Cotas do plano gratuito do Gemini e do Firebase mudam; confira antes de apresentar.
-
-## Mapa do Backlog
-HU01 login real (e-mail e Google, recuperação de senha, sessão renovada automaticamente) · HU02 Mais › Organização · HU03/04 grade de aulas + sugestão de Lousa · HU05 perspectiva, luz e nitidez · HU06/07 OCR, PDF/TXT, gatilho de bordas · HU8 pastas/subpastas por conteúdo · HU9 backup e sincronização · HU10 QR seguro · Extra: grupo de estudo.
-
-## App nativo (opcional)
+## 3. Publicar (HTTPS obrigatório)
 ```
-npm i @capacitor/core @capacitor/cli && npx cap init CameraAcademica br.fiap.nextcode --web-dir=.
-npm i @capacitor/android @capacitor/ios && npx cap add android && npx cap open android
+npm i -g netlify-cli && netlify login && netlify deploy --prod
 ```
+Após editar arquivos, troque a versão em `sw.js` (`camacad-v3` › `v4`) e publique de novo.
+
+## 4. Galaxy S24 FE
+1. Abra o link no Chrome atualizado. 2. Permita câmera e localização. 3. Menu ⋮ › Instalar app.
+4. Entre com o e-mail institucional. 5. Mais: IA pelo servidor, importar agenda `.ics`, definir campus.
+6. Teste: lousa, documento, QR, lanterna, lentes, zoom, ajuste manual. 7. Sem economia de bateria para o Chrome.
+O app detecta recursos na hora (lentes, zoom, lanterna, exposição). Nada é fixo por modelo.
+
+## 5. Como funciona
+Captura › **fila de revisão** (área temporária) › análise em segundo plano › você revisa › salva na pasta › sincroniza.
+- Lousa/Documento: detecta bordas, corrige perspectiva, uniformiza luz. "Ajustar cantos" corrige à mão.
+- Documento: OCR só com bordas detectadas (RN04). "Reanalisar" força.
+- Controles manuais desligam a exposição automática até "Reativar IA automática".
+- Excluir move para a lixeira (30 dias). Preferências e itens sincronizam entre aparelhos.
+- "Enviar foto à IA" desligado: só o texto lido no aparelho vai à IA.
+
+## 6. Limites conhecidos
+- ISO direto exige app nativo (Capacitor). O navegador só expõe exposição e foco quando o Chrome permite.
+- Cerca de 300 fotos por aparelho. Depois, use PDF da pasta e exclua.
+- OCR offline e QR sem Google precisam baixar bibliotecas na 1ª vez. Para uso 100% offline, copie jsQR, Tesseract e jsPDF para a pasta.
+- Se a CSP bloquear algo, veja o Console (F12) e ajuste `_headers`.
+- Imagens ficam no Realtime Database (reduzidas). Em escala, use Cloud Storage.
+- Cotas gratuitas do Gemini e do Firebase mudam.
+
+## 7. Testes
+```
+pip install playwright && playwright install chromium
+python3 tests/qa_browser.py .     # 63 testes, câmera falsa, IA/Firebase simulados
+node tests/qa_function.js         # 12 testes da função de IA
+```
+Não substituem teste em celular real.
+
+## 8. App nativo (opcional)
+`npm i @capacitor/core @capacitor/cli && npx cap init CameraAcademica br.fiap.nextcode --web-dir=. && npm i @capacitor/android && npx cap add android`

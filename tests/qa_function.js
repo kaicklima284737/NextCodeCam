@@ -1,0 +1,22 @@
+const h=require('../netlify/functions/ai.js').handler;const out=[];
+const ok=(n,c)=>out.push((c?'PASS ':'FAIL ')+n);
+process.env.GEMINI_API_KEY='g';process.env.FIREBASE_API_KEY='f';
+let calls=[];global.fetch=async(u,o)=>{calls.push([u,o]);if(u.includes('accounts:lookup'))return{ok:JSON.parse(o.body).idToken=='good',json:async()=>({users:[{email:global.EM||'a@fiap.com.br'}]})};return{ok:true,status:200,text:async()=>'{"candidates":[]}'}};
+const ev=(b,t='good',m='POST')=>({httpMethod:m,headers:{authorization:'Bearer '+t},body:typeof b=='string'?b:JSON.stringify(b)});
+(async()=>{
+ const P={contents:[{parts:[{text:'x'}]}],tools:[{x:1}],systemInstruction:'x'};
+ let r=await h(ev({model:'gemini-2.5-flash',payload:P}));ok('aceita login válido',r.statusCode==200);
+ const sent=JSON.parse(calls.at(-1)[1].body);ok('remove campos extras do payload',!sent.tools&&!sent.systemInstruction);
+ ok('sem token = 401',(await h(ev({payload:P},'')))?.statusCode==401);
+ ok('token inválido = 401',(await h(ev({payload:P},'bad'))).statusCode==401);
+ ok('GET = 405',(await h(ev({},'good','GET'))).statusCode==405);
+ ok('JSON quebrado = 400',(await h(ev('{x')))?.statusCode==400);
+ ok('modelo malicioso = 400',(await h(ev({model:'../../x',payload:P}))).statusCode==400);
+ ok('corpo gigante = 413',(await h(ev('x'.repeat(5e6+1)))).statusCode==413);
+ process.env.ALLOWED_EMAIL_DOMAINS='fiap.com.br';global.EM='x@gmail.com';
+ ok('domínio fora da lista = 403',(await h(ev({payload:P}))).statusCode==403);
+ global.EM='x@aluno.fiap.com.br';ok('subdomínio permitido',(await h(ev({payload:P}))).statusCode==200);
+ process.env.ALLOWED_EMAIL_DOMAINS='';global.EM='a@fiap.com.br';let c429=0;for(let i=0;i<25;i++){if((await h(ev({payload:P}))).statusCode==429)c429++}ok('limite de chamadas por usuário = 429',c429>0);
+ delete process.env.GEMINI_API_KEY;ok('sem env = 500',(await h(ev({payload:P}))).statusCode==500);
+ console.log(out.join('\n'));
+})();
