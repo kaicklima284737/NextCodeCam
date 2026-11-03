@@ -1,0 +1,7 @@
+# Local Vercel folder
+.vercel
+
+# Local environment variables and credentials
+.env
+.env.*
+!.env.example
